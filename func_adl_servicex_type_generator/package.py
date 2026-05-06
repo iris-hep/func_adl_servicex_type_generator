@@ -169,11 +169,20 @@ _g_cpp_to_py_type_map = {
 _g_py_single_types = {i for _, i in _g_cpp_to_py_type_map.items()}
 
 
-# Match `const ` inside a template argument list when the const-qualified
-# type is *not* a pointer. The lookahead walks identifier chars and a single
-# level of `<...>`, then requires a `,` or `>`; if a `*` appears first the
-# match fails and the const is preserved (e.g. `vector<const T*>`).
-_INNER_CONST_RE = re.compile(r"\bconst\s+(?=(?:[^<>,*]|<[^<>]*>)*[,>])")
+_INNER_CONST_RE = re.compile(
+    r"""
+    \bconst\s+              # the `const ` to strip
+    (?=                     # ...only if the type that follows is:
+        (?:
+            [^<>,*]         #   a non-bracket, non-comma, non-star char
+            | <[^<>]*>      #   or a single non-nested <...> group
+        )*
+        [,>]                # ending at a template ',' or '>'.
+    )                       # A '*' before then means it's a pointer —
+                            # leave the const alone (e.g. vector<const T*>).
+    """,
+    re.VERBOSE,
+)
 
 
 def clean_cpp_type(cpp_class_name: Optional[str]) -> Optional[str]:
