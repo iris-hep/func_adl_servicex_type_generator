@@ -1,4 +1,5 @@
 import logging
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -168,6 +169,13 @@ _g_cpp_to_py_type_map = {
 _g_py_single_types = {i for _, i in _g_cpp_to_py_type_map.items()}
 
 
+# Match `const ` inside a template argument list when the const-qualified
+# type is *not* a pointer. The lookahead walks identifier chars and a single
+# level of `<...>`, then requires a `,` or `>`; if a `*` appears first the
+# match fails and the const is preserved (e.g. `vector<const T*>`).
+_INNER_CONST_RE = re.compile(r"\bconst\s+(?=(?:[^<>,*]|<[^<>]*>)*[,>])")
+
+
 def clean_cpp_type(cpp_class_name: Optional[str]) -> Optional[str]:
     """Remove the prefixes and post-fixes from a C++ class name.
 
@@ -180,12 +188,12 @@ def clean_cpp_type(cpp_class_name: Optional[str]) -> Optional[str]:
     if cpp_class_name is None:
         return None
 
-    # Remove the prefixes and post-fixes
     cpp_class_name = cpp_class_name.strip()
     if cpp_class_name.startswith("const "):
         cpp_class_name = cpp_class_name[6:].strip()
     while cpp_class_name.endswith("*"):
         cpp_class_name = cpp_class_name[:-1].strip()
+    cpp_class_name = _INNER_CONST_RE.sub("", cpp_class_name)
 
     return cpp_class_name
 
