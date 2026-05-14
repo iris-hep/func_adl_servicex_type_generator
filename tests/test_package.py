@@ -15,6 +15,7 @@ from func_adl_servicex_type_generator.data_model import (
     parameter_action,
 )
 from func_adl_servicex_type_generator.package import (
+    clean_cpp_type,
     py_type_from_cpp,
     template_package_scaffolding,
     write_out_classes,
@@ -1609,3 +1610,25 @@ def test_py_type_from_cpp_class_bad():
         py_type_from_cpp("xAOD::Jets::ColorR", class_dict)
 
     assert "ColorR" in str(e.value)
+
+
+@pytest.mark.parametrize(
+    "raw, cleaned",
+    [
+        (None, None),
+        ("xAOD::Jet", "xAOD::Jet"),
+        ("const xAOD::Jet", "xAOD::Jet"),
+        ("const xAOD::Jet*", "xAOD::Jet"),
+        ("vector<const xAOD::Jet>", "vector<xAOD::Jet>"),
+        ("map<const K, const V>", "map<K, V>"),
+        ("const vector<const xAOD::Jet>", "vector<xAOD::Jet>"),
+        # Pointer-to-const is a distinct C++ type; const must be preserved.
+        ("vector<const xAOD::Jet*>", "vector<const xAOD::Jet*>"),
+        ("map<const K, const V*>", "map<K, const V*>"),
+        ("vector<const std::vector<int>>", "vector<std::vector<int>>"),
+        # `const` only matches as a whole word; identifiers stay intact.
+        ("std::vector<int>::const_iterator", "std::vector<int>::const_iterator"),
+    ],
+)
+def test_clean_cpp_type(raw, cleaned):
+    assert clean_cpp_type(raw) == cleaned
