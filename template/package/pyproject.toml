@@ -31,6 +31,7 @@ classifiers = [
 dependencies = [
     "servicex>=3.0.0b1",
     "Jinja2>=3.0.2",
+    "PyYAML>=6.0",
     "func_adl_xAOD",
     ]
 

@@ -21,6 +21,9 @@ from func_adl_servicex_type_generator.data_model import (
 
 from .class_utils import package_qualified_class
 
+# Entries in the output directory that survive regeneration
+_PRESERVED_OUTPUT_ENTRIES = {".git", ".gitignore", ".github"}
+
 
 @jinja2.pass_context  # type: ignore
 def subrender_filter(context, value):
@@ -66,9 +69,17 @@ def template_package_scaffolding(
     env = jinja2.Environment(loader=loader)
     prep_jinja2_env(env)
 
-    # Remove the package if it was there before
+    # Remove the package if it was there before. Anything git related is
+    # left alone, so the output directory can be a git repo that is
+    # regenerated in place.
     if output_path.exists():
-        shutil.rmtree(output_path)
+        for child in output_path.iterdir():
+            if child.name in _PRESERVED_OUTPUT_ENTRIES:
+                continue
+            if child.is_dir() and not child.is_symlink():
+                shutil.rmtree(child)
+            else:
+                child.unlink()
 
     # Create the output directory
     output_path.mkdir(parents=True, exist_ok=True)

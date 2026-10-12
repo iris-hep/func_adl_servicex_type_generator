@@ -51,6 +51,35 @@ def test_template_package(tmp_path, template_path):
     assert (output_path / data["package_name"]).exists()
 
 
+def test_template_package_regenerate_keeps_git(tmp_path: Path, template_path):
+    data = {
+        "package_name": "func_adl_servicex_xaodr21",
+        "package_version": "1.0.22.2.187",
+        "package_info_description": "xAOD R21 22.2.187",
+        "calibration_types": [""],
+        "release_series": "21",
+        "backend_default_name": "xaod_r21",
+        "collections": [],
+        "metadata": {},
+    }
+    output_path = tmp_path / "my_package"
+    (output_path / ".git").mkdir(parents=True)
+    (output_path / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+    (output_path / ".gitignore").write_text("__pycache__/\n")
+    (output_path / "stale_file.txt").write_text("old")
+    (output_path / "stale_dir").mkdir()
+    (output_path / "stale_dir" / "old.py").write_text("old")
+
+    template_package_scaffolding(data, template_path, output_path, [])
+
+    # Git info survives, stale generated output does not
+    assert (output_path / ".git" / "HEAD").exists()
+    assert (output_path / ".gitignore").exists()
+    assert not (output_path / "stale_file.txt").exists()
+    assert not (output_path / "stale_dir").exists()
+    assert (output_path / "pyproject.toml").exists()
+
+
 def test_template_package_extra_file(tmp_path: Path, template_path):
     data = {
         "package_name": "func_adl_servicex_xaodr21",
